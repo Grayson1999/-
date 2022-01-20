@@ -9,13 +9,12 @@ class First():
     def __init__(self):
         self.options = webdriver.ChromeOptions()
         self.options.add_argument("headless")
-        self.driver = webdriver.Chrome('./chromedriver.exe',options=self.options)
+        self.driver = webdriver.Chrome('./chromedriver.exe')#,options=self.options
         self.driver.implicitly_wait(5)
         self.driver.get("https://sports.koreanpc.kr/front/club/listClub.do;jsessionid=0E47FE540D3B9FC0C51A3B4D4B356314")
         self.columns = ['번호','지역','클럽명','활동시간','종목','기타종목','장애유형','승인일']
         self.dic={}
-        for col in self.columns:
-            self.dic[col] = list()
+        self.csvfile_count = 1
 
     ##등록년도 조회
     def lookup(self, year):
@@ -43,6 +42,9 @@ class First():
 
     #반복하여 페이지 이동
     def crawling1(self):
+        ## dic 초기화
+        for col in self.columns:
+            self.dic[col] = list()
         BARCOUNT = 2
         while(True):
 
@@ -68,7 +70,7 @@ class First():
                 self.page_bar.find_elements_by_tag_name('a')[-2].click()
             
             if self.current_page >= self.last_page:
-                self.driver.quit()
+                
                 return self.make_df()
             
      #dataFrame 만들기       
@@ -77,17 +79,19 @@ class First():
         self.fir_df = pd.DataFrame(self.dic,columns=self.dic.keys(), index=self.dic['번호'])
         self.fir_df = self.fir_df.sort_values('번호', ascending = True)
         self.fin_df= self.fir_df.drop('번호',axis=1)
-        self.fin_df.to_csv('./file_name.csv', sep=',', na_rep='NaN')
+        self.fin_df.to_csv('./file'+str(self.csvfile_count)+'.csv', sep=',', na_rep='NaN')
         print('-'*30+"dataFrame CSV파일로 저장 중"+'-'*30)
+        self.csvfile_count += 1
         return self.fin_df
 
     #시작
     def run(self):
-        self.years = [2022]
+        self.years = [2020,2021,2022]
         for year in self.years:
             print('-'*30+"생활체육정보센터 "+str(year)+"년도 검색중"+'-'*30)
             self.lookup(year)
             print('-'*30+"생활체육정보센터 "+str(year)+"년도 검색완료"+'-'*30)
+        self.driver.quit()
         return True
 
 s = First()
