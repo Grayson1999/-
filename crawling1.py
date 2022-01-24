@@ -79,7 +79,7 @@ class First():
         self.fir_df = pd.DataFrame(self.dic,columns=self.dic.keys(), index=self.dic['번호'])
         self.fir_df = self.fir_df.sort_values('번호', ascending = True)
         self.fin_df= self.fir_df.drop('번호',axis=1)
-        self.fin_df.to_csv('./file'+str(self.csvfile_count)+'.csv', sep=',', na_rep='NaN')
+        self.fin_df.to_csv('./생활체육정보센터'+str(self.csvfile_count)+'.csv', sep=',', na_rep='NaN')
         print('-'*30+"dataFrame CSV파일로 저장 중"+'-'*30)
         self.csvfile_count += 1
         return self.fin_df
