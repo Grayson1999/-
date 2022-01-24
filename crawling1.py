@@ -1,10 +1,12 @@
+from unittest import result
 import requests
 from bs4 import BeautifulSoup as bs
 import pandas as pd
 from selenium import webdriver
+from crawlingutil import CrawlingUtill
 
-class First():
-    
+cutil = CrawlingUtill('생활체육정보센터')
+class Crawling1():
     ## chrome실행
     def __init__(self):
         self.options = webdriver.ChromeOptions()
@@ -15,6 +17,10 @@ class First():
         self.columns = ['번호','지역','클럽명','활동시간','종목','기타종목','장애유형','승인일']
         self.dic={}
         self.csvfile_count = 1
+        #이름 추가
+        self.html = self.driver.page_source
+        self.result = bs(self.html, 'lxml') #==html.parser
+        self.tableIndexName = self.result.find("div",{"class":"txt_center"}).find("h2",{"class":"sub_tit_v3"}).text
 
     ##등록년도 조회
     def lookup(self, year):
@@ -47,7 +53,6 @@ class First():
             self.dic[col] = list()
         BARCOUNT = 2
         while(True):
-
             self.current_page = int(self.driver.find_element_by_class_name("current").text)
             self.page_index = self.current_page%10+BARCOUNT
             self.page_bar = self.driver.find_elements_by_class_name("paging_area")[0]
@@ -55,7 +60,7 @@ class First():
 
             ##데이터 추가 
             self.html = self.driver.page_source
-            self.result = bs(self.html, 'lxml')#==html.parser
+            self.result = bs(self.html, 'lxml') #==html.parser
             self.result1 = self.result.find_all('td',{'data-cell-header':self.columns})
             self.result2 = list(map(lambda x : x.text.strip(),self.result1))
             self.count = 0
@@ -79,14 +84,16 @@ class First():
         self.fir_df = pd.DataFrame(self.dic,columns=self.dic.keys(), index=self.dic['번호'])
         self.fir_df = self.fir_df.sort_values('번호', ascending = True)
         self.fin_df= self.fir_df.drop('번호',axis=1)
-        self.fin_df.to_csv('./생활체육정보센터'+str(self.csvfile_count)+'.csv', sep=',', na_rep='NaN')
+        self.fin_df.index.name = self.tableIndexName 
+        self.fin_df.to_csv('./'+cutil.sitename+str(self.csvfile_count)+'.csv', sep=',', na_rep='NaN')
         print('-'*30+"dataFrame CSV파일로 저장 중"+'-'*30)
         self.csvfile_count += 1
         return self.fin_df
 
+
     #시작
     def run(self):
-        self.years = [2020,2021,2022]
+        self.years = [2020,2021,2022]#
         for year in self.years:
             print('-'*30+"생활체육정보센터 "+str(year)+"년도 검색중"+'-'*30)
             self.lookup(year)
@@ -94,5 +101,6 @@ class First():
         self.driver.quit()
         return True
 
-s = First()
-s.run()
+if __name__ =="__main__":
+    s = Crawling1()
+    s.run()
