@@ -1,3 +1,5 @@
+from cgitb import lookup
+import time
 from unittest import result
 import requests
 from bs4 import BeautifulSoup as bs
@@ -7,21 +9,25 @@ from crawlingutil import CrawlingUtill
 
 cutil = CrawlingUtill('생활체육정보센터')
 class Crawling1():
-    ## chrome실행
     def __init__(self):
+        self.columns = ['년도','번호','지역','클럽명','활동시간','종목','기타종목','장애유형','승인일']
+        self.years = [2020,2021,2022]#
+        self.dic={}
+        self.year = 0
+        ## dic 초기화
+        for col in self.columns:
+            self.dic[col] = list()
+    
+    ## selenium 실행
+    def openSelenium(self,year):
+        self.year = year
         self.options = webdriver.ChromeOptions()
         self.options.add_argument("headless")
         self.driver = webdriver.Chrome('./chromedriver.exe')#,options=self.options
-        self.driver.implicitly_wait(5)
+        self.driver.implicitly_wait(10)
         self.driver.get("https://sports.koreanpc.kr/front/club/listClub.do;jsessionid=0E47FE540D3B9FC0C51A3B4D4B356314")
-        self.columns = ['번호','지역','클럽명','활동시간','종목','기타종목','장애유형','승인일']
-        self.dic={}
-        self.csvfile_count = 1
-        #이름 추가
-        self.html = self.driver.page_source
-        self.result = bs(self.html, 'lxml') #==html.parser
-        self.tableIndexName = self.result.find("div",{"class":"txt_center"}).find("h2",{"class":"sub_tit_v3"}).text
-
+        return self.lookup(self.year)
+    
     ##등록년도 조회
     def lookup(self, year):
         self.input_text = self.driver.find_element_by_id('searchYear')
@@ -48,26 +54,25 @@ class Crawling1():
 
     #반복하여 페이지 이동
     def crawling1(self):
-        ## dic 초기화
-        for col in self.columns:
-            self.dic[col] = list()
         BARCOUNT = 2
         while(True):
             self.current_page = int(self.driver.find_element_by_class_name("current").text)
             self.page_index = self.current_page%10+BARCOUNT
             self.page_bar = self.driver.find_elements_by_class_name("paging_area")[0]
-            self.page_bar.find_elements_by_tag_name('a')[self.page_index].click()
+            self.page_bar.find_elements_by_tag_name('a')[self.page_index].click()       
 
             ##데이터 추가 
             self.html = self.driver.page_source
             self.result = bs(self.html, 'lxml') #==html.parser
             self.result1 = self.result.find_all('td',{'data-cell-header':self.columns})
             self.result2 = list(map(lambda x : x.text.strip(),self.result1))
-            self.count = 0
+            self.count = 1
+            self.dic[self.columns[0]].append(self.year) ## 년도 추가
             for i in range(len(self.result2)):
                 if i > 0 and i % 8 == 0:
+                    self.dic[self.columns[0]].append(self.year) ## 년도 추가
                     self.count -= 8
-                self.dic[self.columns[self.count]].append(self.result2[i]) 
+                self.dic[self.columns[self.count]].append(self.result2[i])## 홈페이지의 데이터 추가
                 self.count+=1
 
             if self.current_page % 10 == 0:    ## 모든 함수 수행 후 실행해야 함
@@ -75,31 +80,33 @@ class Crawling1():
                 self.page_bar.find_elements_by_tag_name('a')[-2].click()
             
             if self.current_page >= self.last_page:
+                return True
                 
-                return self.make_df()
+                
             
      #dataFrame 만들기       
     def make_df(self):
         self.dic['센터명'] = ['생활체육정보센터']*len(self.dic['번호'])
         self.fir_df = pd.DataFrame(self.dic,columns=self.dic.keys(), index=self.dic['번호'])
-        self.fir_df = self.fir_df.sort_values('번호', ascending = True)
+        # self.fir_df = self.fir_df.sort_values('번호', ascending = True)##인덱스 제거로 인한 정렬 불필요
         self.fin_df= self.fir_df.drop('번호',axis=1)
-        self.fin_df.index.name = self.tableIndexName 
-        self.fin_df.to_csv('./'+cutil.sitename+str(self.csvfile_count)+'.csv', sep=',', na_rep='NaN')
+        self.fin_df.to_csv('./{}.csv'.format(cutil.sitename), sep=',', na_rep='NaN',encoding="CP949", index=False)
         print('-'*30+"dataFrame CSV파일로 저장 중"+'-'*30)
-        self.csvfile_count += 1
         return self.fin_df
 
 
     #시작
     def run(self):
-        self.years = [2020,2021,2022]#
+        self.checkFirst = False
         for year in self.years:
             print('-'*30+"생활체육정보센터 "+str(year)+"년도 검색중"+'-'*30)
-            self.lookup(year)
+            if self.checkFirst == False:
+                self.checkFirst = self.openSelenium(year)
+            else:
+                self.lookup(year)
             print('-'*30+"생활체육정보센터 "+str(year)+"년도 검색완료"+'-'*30)
         self.driver.quit()
-        return True
+        return self.make_df()
 
 if __name__ =="__main__":
     s = Crawling1()
