@@ -14,16 +14,20 @@ class Crawling4():
         self.tableNameList = []
 
     ##프로그램 이름 저장
-    def mk_table_name_list(self):
-        for tablename in self.tableNames:
-            self.tableNameList.append(tablename.text.strip())
-        return self.html_to_csv()
+    # def mk_table_name_list(self):
+    #     for tablename in self.tableNames:
+    #         self.tableNameList.append(tablename.text.strip())
+    #     return self.html_to_csv()
+        
 
-    ## html table을 df로 저장     
+    # ## html table을 df로 저장     
     def html_to_csv(self):
+    #     table_df_list = cutil.crawlingHtml_to_table(self.htmlAll)
+    #     cutil.table_list_to_csv(table_df_list,self.tableNameList)
+    #     return table_df_list
         table_df_list = cutil.crawlingHtml_to_table(self.htmlAll)
-        cutil.table_list_to_csv(table_df_list,self.tableNameList)
-        return table_df_list
+        for table in table_df_list:
+            
 
     def run(self):
         return self.mk_table_name_list()
