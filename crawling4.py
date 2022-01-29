@@ -1,37 +1,60 @@
-from itertools import count
 import requests
 from bs4 import BeautifulSoup as bs
 import pandas as pd
-from crawlingutil import CrawlingUtill
 
 
-cutil = CrawlingUtill("서부재활체육센터")
-class Crawling4():
-    def __init__(self):
-        self.html = requests.get("http://www.sbsports.or.kr/sub/wrcAble.do").text
-        self.htmlAll = bs(self.html,'html.parser')
-        self.tableNames = self.htmlAll.find_all('caption')
-        self.tableNameList = []
+my_columns = ["프로그램", "대상","참가요일","시간","회비"]
 
-    ##프로그램 이름 저장
-    # def mk_table_name_list(self):
-    #     for tablename in self.tableNames:
-    #         self.tableNameList.append(tablename.text.strip())
-    #     return self.html_to_csv()
-        
+##dic 초기화
+dic={}
+for col in my_columns:
+    dic[col]=list()
 
-    # ## html table을 df로 저장     
-    def html_to_csv(self):
-    #     table_df_list = cutil.crawlingHtml_to_table(self.htmlAll)
-    #     cutil.table_list_to_csv(table_df_list,self.tableNameList)
-    #     return table_df_list
-        table_df_list = cutil.crawlingHtml_to_table(self.htmlAll)
-        for table in table_df_list:
-            
+##데이터 가져오기
+html = requests.get("http://www.sbsports.or.kr/sub/wrcAble.do").text
+htmlAll = bs(html,'html.parser')
 
-    def run(self):
-        return self.mk_table_name_list()
+## 모든 표 df로 만들기
+df_list = pd.read_html(html,header=0)
 
-if __name__ =="__main__":
-    c4 = Crawling4()
-    c4.run()
+## 프로그램 이름 리스트
+tableNames = htmlAll.find_all('caption')
+tb_names_list = [name.text.strip() for name in tableNames]
+name_dic = {"구분":[]}
+
+for i in range(len(tb_names_list)):
+
+    ##현재 테이블의 컬럼 가져오기
+    current_col = df_list[i].columns.tolist()
+    for name in current_col:
+        df_list[i]=df_list[i].rename({name:name.replace(" ","")},axis=1)
+    current_col = df_list[i].columns.tolist()
+
+    ## 3중 for문 등 여러 문제로 인해 하드한 코딩으로 진행함
+    for col in current_col:
+        if col == "비고":
+            current_col.remove(col)
+        elif col == "구분":
+            df_list[i]=df_list[i].rename({col:"프로그램"},axis=1)
+        elif col == "참가요일 및 시간":
+            df_list[i]=df_list[i].rename({col:"참가요일"},axis=1)
+        elif col == "정원":
+            current_col.remove(col)
+
+    inter_col = list(set(my_columns) & set(current_col))
+    differ_col = list(set(my_columns).difference(current_col))
+    print(inter_col,differ_col)
+
+    ##dic 데이터 추가
+    for inter in inter_col:
+        for value in df_list[i][inter]:
+            dic[inter].append(value)
+    for differ in differ_col:
+        for _ in range(len(df_list[i][inter_col[0]])):
+            dic[differ].append("")
+    for _ in range(len(df_list[i][inter_col[0]])):
+        name_dic["구분"].append(tb_names_list[i][:-3]+"프로그램" if tb_names_list[i].find("테이블")!=-1 else tb_names_list[i])
+dic.update(name_dic)
+
+print(pd.DataFrame(dic))## 컬럼 재 정렬 필요
+
