@@ -18,12 +18,13 @@ htmlAll = bs(html,'html.parser')
 ## 모든 표 df로 만들기
 df_list = pd.read_html(html,header=0)
 
+
 ## 프로그램 이름 리스트
 tableNames = htmlAll.find_all('caption')
 tb_names_list = [name.text.strip() for name in tableNames]
 name_dic = {"구분":[]}
 
-for i in range(len(tb_names_list)):
+for i in range(len(df_list)):
 
     ##현재 테이블의 컬럼 가져오기
     current_col = df_list[i].columns.tolist()
@@ -37,9 +38,11 @@ for i in range(len(tb_names_list)):
             current_col.remove(col)
         elif col == "구분":
             df_list[i]=df_list[i].rename({col:"프로그램"},axis=1)
-        elif col == "참가요일 및 시간":
-            df_list[i]=df_list[i].rename({col:"참가요일"},axis=1)
+        elif col == "참가요일및시간":
+            df_list[i]=df_list[i].rename({"참가요일 및 시간":"참가요일"},axis=1)
         elif col == "정원":
+            current_col.remove(col)
+        elif col == "프로그램.1":
             current_col.remove(col)
 
     inter_col = list(set(my_columns) & set(current_col))
