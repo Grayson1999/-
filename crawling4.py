@@ -1,8 +1,9 @@
+from unittest import result
 import requests
 from bs4 import BeautifulSoup as bs
 import pandas as pd
 
-
+sitename = "서부재활체육센터"
 my_columns = ["프로그램", "대상","참가요일","시간","회비"]
 
 ##dic 초기화
@@ -30,7 +31,7 @@ for i in range(len(tb_names_list)):
         df_list[i]=df_list[i].rename({name:name.replace(" ","")},axis=1)
     current_col = df_list[i].columns.tolist()
 
-    ## 3중 for문 등 여러 문제로 인해 하드한 코딩으로 진행함
+    ## 3중 for문 등 여러 문제로 인해 하드 코딩으로 진행함
     for col in current_col:
         if col == "비고":
             current_col.remove(col)
@@ -43,7 +44,6 @@ for i in range(len(tb_names_list)):
 
     inter_col = list(set(my_columns) & set(current_col))
     differ_col = list(set(my_columns).difference(current_col))
-    print(inter_col,differ_col)
 
     ##dic 데이터 추가
     for inter in inter_col:
@@ -56,5 +56,10 @@ for i in range(len(tb_names_list)):
         name_dic["구분"].append(tb_names_list[i][:-3]+"프로그램" if tb_names_list[i].find("테이블")!=-1 else tb_names_list[i])
 dic.update(name_dic)
 
-print(pd.DataFrame(dic))## 컬럼 재 정렬 필요
-
+##df 생성 및 컬럼의 순서를 변경
+sort_columns = list(my_columns)
+sort_columns.insert(0,"구분")
+result_df = pd.DataFrame(dic)
+result_df = result_df[sort_columns]
+result_df = result_df.drop(result_df[result_df["프로그램"]=="개인락카"].index)
+result_df.to_csv('./{}.csv'.format(sitename), sep=',', na_rep='NaN',encoding="CP949", index=False)
