@@ -242,15 +242,17 @@ class DataCrawler():
     #selenium setting
     def openSelenium(self,year):
         self.year = year
-        # chrome_options = webdriver.ChromeOptions()
-        # chrome_options.add_argument('--headless')
+        chrome_options = webdriver.ChromeOptions()
+        # chrome_options.add_argument('headless')
+        chrome_options.add_argument("--start-maximized") # add
+        chrome_options.add_argument("--window-size=1024,763") # add
         # chrome_options.add_argument('--no-sandbox')
         # chrome_options.add_argument('--disable-dev-shm-usage')
 
-        self.driver = webdriver.Chrome('./chromedriver.exe')#options=chrome_options
-        self.driver.implicitly_wait(10)
-
-        self.driver.get("https://sports.koreanpc.kr/front/club/listClub.do;jsessionid=0E47FE540D3B9FC0C51A3B4D4B356314")
+        self.driver = webdriver.Chrome('./chromedriver.exe',options=chrome_options)#
+        self.driver.implicitly_wait(15)
+        self.url = "https://sports.koreanpc.kr/front/club/listClub.do;jsessionid=0E47FE540D3B9FC0C51A3B4D4B356314"
+        self.driver.get(self.url)
         return self.lookup(self.year)
 
     ##등록년도 조회
@@ -315,9 +317,44 @@ class DataCrawler():
         self.fir_df = pd.DataFrame(self.dic,columns=self.dic.keys(), index=self.dic['번호'])
         # self.fir_df = self.fir_df.sort_values('번호', ascending = True)##인덱스 제거로 인한 정렬 불필요
         self.fin_df= self.fir_df.drop('번호',axis=1)
-        self.fin_df.to_csv('data/생활체육정보센터.csv', sep=',', na_rep='NaN',encoding="CP949", index=False)
-        print('-'*30+"dataFrame CSV파일로 저장 중"+'-'*30)
-        return self.fin_df
+        # self.fin_df.to_csv('data/생활체육정보센터.csv', sep=',', na_rep='NaN',encoding="CP949", index=False)
+        return self.remk_df(self.fin_df)
+    
+
+    #데이터 형식 맞추기
+    def remk_df(self,df):
+        sitename = "생활체육정보센터"        
+        my_columns = ["프로그램명","설명","담당자이름","신청자격","신청방법"]#,"담당기관","담당자연락처","연결URL"
+        url = self.url
+        self.initial_setting(sitename,my_columns)
+        self.find_data(url)
+        siteNumber = self.htmlAll.find("p",{"class":"footer_info"}).text.split("\n")[2].split()[-1]
+
+        for i in range(len(df)):#len(df_list)
+            ##현재 테이블의 컬럼 가져오기
+            current_col = df.columns.tolist()
+
+            merge_cols = ["종목","지역","활동시간"]##["참가요일","시간","회비"] => 설명 컬럼에 병합해서 넣기
+            for col in current_col:
+                if col == "클럽명":
+                    df=df.rename({col:"프로그램명"},axis=1)
+                    current_col.remove(col)
+                    current_col.append("프로그램명")
+                if col == "장애유형":
+                    df=df.rename({col:"신청자격"},axis=1)
+                    current_col.remove(col)
+                    current_col.append("신청자격")
+            
+            ## 설명 컴럼 추가
+            current_col.append("설명")
+            df['설명'] =df[merge_cols].apply(lambda row: '; '.join(row.values.astype(str)), axis=1) ##;(세미콜론)으로 구분
+            
+            inter_col = list(set(self.my_columns) & set(current_col))
+            differ_col = list(set(self.my_columns).difference(current_col))
+
+            self.col_append_data(df,sitename,siteNumber,url, current_col = inter_col, differ_col = differ_col)
+        self.dic.update(self.name_dic)
+        self.dic_to_csv()
 
 
     #생활체육정보센터 -실행함수 
@@ -448,7 +485,6 @@ class DataCrawler():
         program_page = self.htmlAll.find("li",{"class":"cd1 cd1c4"}).find("a")["href"].split("/")[-1]
         self.find_data(url,program_page=program_page)
         siteNumber = " ".join(self.htmlAll.find("address",{"class":"foot_in"}).find("span").text.split()[2:4])
-        print(siteNumber)
         pages = self.htmlAll.find('nav',{"class":"tabmenu"}).find_all("li",{"class":"cd3"})
         programURLs = []
         
@@ -516,7 +552,6 @@ class DataCrawler():
             current_col = initial_df.columns.tolist()
             merge_cols = ["반","교육일","시간"]
             for col in current_col:
-                print(col)
                 if col == "프로그램":
                     initial_df = initial_df.rename({col:"프로그램명"},axis=1)
                     current_col.remove(col)
@@ -542,7 +577,7 @@ if __name__=='__main__':
     # print(crawler.nrc())
     # print(crawler.nurim_run())
     # print(crawler.skwelfare())
-    # print(crawler.koreanpc_run())
-    crawler.sbsports()
-    crawler.sbsd()
-    crawler.bisco()
+    print(crawler.koreanpc_run())
+    # crawler.sbsports()
+    # crawler.sbsd()
+    # crawler.bisco()
