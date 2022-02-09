@@ -7,13 +7,14 @@ import pandas as pd
 from selenium import webdriver
 from crawlingutil import CrawlingUtill
 
-cutil = CrawlingUtill('생활체육정보센터')
 class Crawling1():
     def __init__(self):
         self.columns = ['년도','번호','지역','클럽명','활동시간','종목','기타종목','장애유형','승인일']
+        self.siteNumber = ""
         self.years = [2020,2021,2022]#
         self.dic={}
         self.year = 0
+        self.sitename = "생활체육정보센터"
         ## dic 초기화
         for col in self.columns:
             self.dic[col] = list()
@@ -90,10 +91,13 @@ class Crawling1():
         self.fir_df = pd.DataFrame(self.dic,columns=self.dic.keys(), index=self.dic['번호'])
         # self.fir_df = self.fir_df.sort_values('번호', ascending = True)##인덱스 제거로 인한 정렬 불필요
         self.fin_df= self.fir_df.drop('번호',axis=1)
-        self.fin_df.to_csv('./{}.csv'.format(cutil.sitename), sep=',', na_rep='NaN',encoding="CP949", index=False)
+        
+        self.fin_df.to_csv('./{}.csv'.format(self.sitename), sep=',', na_rep='NaN',encoding="CP949", index=False)
         print('-'*30+"dataFrame CSV파일로 저장 중"+'-'*30)
         return self.fin_df
-
+    def remk_df(self,df):
+        current_col = df.columns.tolist()
+        merge_cols = []
 
     #시작
     def run(self):
